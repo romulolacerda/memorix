@@ -68,23 +68,23 @@ export class StatsComponent implements OnInit {
 
     private async loadRealStats() {
         try {
-            const allCards = await this.flashcardRepo.getAllFlashcards();
+            const allCards = await this.flashcardRepo.getFlashcardsForStats();
             
             this.totalCards.set(allCards.length);
             
             // Cartões que já passaram da fase inicial (intervalo >= 21 é considerado maduro no Anki)
             // Aqui vamos usar interval > 0 para simplificar se o banco estiver vazio, ou interval >= 21
-            const learned = allCards.filter(c => c.interval > 0).length; 
+            const learned = allCards.filter(c => c.interval && c.interval > 0).length; 
             this.learnedCards.set(learned);
 
             // Cartões para hoje
             const now = new Date().toISOString();
-            const due = allCards.filter(c => c.next_review_date <= now).length;
+            const due = allCards.filter(c => c.next_review_date && c.next_review_date <= now).length;
             this.dueCards.set(due);
 
             // Retenção média baseada no ease_factor (2.5 é o padrão = 100% como baseline bom, mínimo é 1.3)
             if (allCards.length > 0) {
-                const totalEase = allCards.reduce((acc, c) => acc + c.ease_factor, 0);
+                const totalEase = allCards.reduce((acc, c) => acc + (c.ease_factor || 0), 0);
                 const avgEase = totalEase / allCards.length;
                 
                 // Normaliza: 2.5 = 100%, 1.3 = 50%

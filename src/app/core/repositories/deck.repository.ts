@@ -68,31 +68,40 @@ export class DeckRepository {
   
   async getDecksWithStats(): Promise<(Deck & { totalCards: number, cardsToReview: number })[]> {
     const decks = await this.getDecks();
-    const result = [];
     
+    const user_id = this.session.currentUser()?.id;
+    if (!user_id) return decks.map(d => ({ ...d, totalCards: 0, cardsToReview: 0 }));
+
+    // Busca apenas deck_id e next_review_date em uma única query
+    const { data: flashcards, error } = await this.supabase
+      .from('flashcards')
+      .select('deck_id, next_review_date')
+      .eq('user_id', user_id);
+      
+    if (error) {
+      console.error('Error fetching flashcards stats', error);
+      return decks.map(d => ({ ...d, totalCards: 0, cardsToReview: 0 }));
+    }
+
     const now = new Date().toISOString();
+    const statsMap = new Map<string, { totalCards: number, cardsToReview: number }>();
     
-    for (const deck of decks) {
-      // Get total cards
-      const { count: totalCards } = await this.supabase
-        .from('flashcards')
-        .select('*', { count: 'exact', head: true })
-        .eq('deck_id', deck.id);
-        
-      // Get due cards
-      const { count: cardsToReview } = await this.supabase
-        .from('flashcards')
-        .select('*', { count: 'exact', head: true })
-        .eq('deck_id', deck.id)
-        .lte('next_review_date', now);
-        
-      result.push({
-        ...deck,
-        totalCards: totalCards || 0,
-        cardsToReview: cardsToReview || 0
-      });
+    for (const card of (flashcards || [])) {
+      const stats = statsMap.get(card.deck_id) || { totalCards: 0, cardsToReview: 0 };
+      stats.totalCards++;
+      if (card.next_review_date <= now) {
+        stats.cardsToReview++;
+      }
+      statsMap.set(card.deck_id, stats);
     }
     
-    return result;
+    return decks.map(deck => {
+      const stats = statsMap.get(deck.id) || { totalCards: 0, cardsToReview: 0 };
+      return {
+        ...deck,
+        totalCards: stats.totalCards,
+        cardsToReview: stats.cardsToReview
+      };
+    });
   }
 }

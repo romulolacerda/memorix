@@ -11,6 +11,7 @@ import { Flashcard } from '../../core/models/models';
 import { SM2SchedulerService, ReviewGrade } from '../../core/services/sm2-scheduler.service';
 import { StudyLogRepository } from '../../core/repositories/study-log.repository';
 import { NotificationService } from '../../core/services/notification.service';
+import { PdfExportService } from '../../core/services/pdf-export.service';
 
 type StudyState = 'front' | 'back' | 'finished' | 'empty';
 
@@ -89,14 +90,22 @@ type StudyState = 'front' | 'back' | 'finished' | 'empty';
 
       <!-- Finished State -->
       @if (state() === 'finished') {
-          <div class="flex-1 px-6 flex flex-col items-center justify-center text-center animate-fade-in-up">
-              <div class="w-32 h-32 mb-8 bg-primary-container text-primary rounded-full flex items-center justify-center shadow-md">
+          <div class="flex-1 px-6 flex flex-col items-center justify-center text-center animate-fade-in-up overflow-y-auto py-8">
+              <div class="w-32 h-32 mb-8 bg-primary-container text-primary rounded-full flex items-center justify-center shadow-md shrink-0 mx-auto">
                   <app-icon name="emoji_events" [isFilled]="true" class="text-[64px] !w-[64px] !h-[64px]"></app-icon>
               </div>
-              <h2 class="text-[32px] font-bold text-on-surface mb-2">Sessão Concluída!</h2>
-              <p class="text-on-surface-variant text-[16px] mb-8">
+              <h2 class="text-[32px] font-bold text-on-surface mb-2 shrink-0">Sessão Concluída!</h2>
+              <p class="text-on-surface-variant text-[16px] mb-6 shrink-0">
                   Você revisou {{ totalCards() }} cartões. Excelente trabalho!
               </p>
+
+              <button (click)="sharePdf()" [disabled]="isGeneratingPdf()" class="w-full bg-[#25D366] text-white font-bold text-[16px] py-4 rounded-2xl active:scale-95 transition-all shadow-md mb-3 flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100">
+                  @if (isGeneratingPdf()) {
+                      <mat-icon class="animate-spin">sync</mat-icon> Gerando PDF...
+                  } @else {
+                      <app-icon name="share" [isFilled]="true"></app-icon> Compartilhar PDF no WhatsApp
+                  }
+              </button>
 
               <button routerLink="/home" class="w-full bg-primary text-white font-bold text-[18px] py-4 rounded-2xl active:scale-95 transition-all shadow-md mb-3">
                   Voltar ao Início
@@ -131,9 +140,11 @@ export class StudyComponent implements OnInit {
     private sm2 = inject(SM2SchedulerService);
     private studyLogRepo = inject(StudyLogRepository);
     private notification = inject(NotificationService);
+    private pdfExport = inject(PdfExportService);
 
     state = signal<StudyState>('front');
     loading = signal<boolean>(true);
+    isGeneratingPdf = signal<boolean>(false);
     
     cards = signal<Flashcard[]>([]);
     currentIndex = signal<number>(0);
@@ -208,6 +219,15 @@ export class StudyComponent implements OnInit {
             this.notification.success('Sessão concluída! Excelente trabalho.');
         } else {
             this.state.set('front');
+        }
+    }
+
+    async sharePdf() {
+        this.isGeneratingPdf.set(true);
+        try {
+            await this.pdfExport.generateAndShareStudyPdf(this.cards());
+        } finally {
+            this.isGeneratingPdf.set(false);
         }
     }
 }

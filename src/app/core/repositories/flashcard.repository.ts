@@ -40,6 +40,19 @@ export class FlashcardRepository {
     if (error) throw error;
     return data || [];
   }
+
+  async getFlashcardsForStats(): Promise<Partial<Flashcard>[]> {
+    const user_id = this.session.currentUser()?.id;
+    if (!user_id) return [];
+
+    const { data, error } = await this.supabase
+      .from('flashcards')
+      .select('interval, next_review_date, ease_factor')
+      .eq('user_id', user_id);
+      
+    if (error) throw error;
+    return data || [];
+  }
   
   async getDueFlashcards(): Promise<Flashcard[]> {
     const now = new Date().toISOString();

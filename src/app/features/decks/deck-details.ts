@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,6 +14,7 @@ import { ConfirmationDialogService } from '../../core/services/confirmation-dial
 @Component({
   selector: 'app-deck-details',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, RouterLink, MatIconModule, PageHeaderComponent, EmptyStateComponent, IconComponent],
   template: `
     <div class="h-full bg-surface-container flex flex-col">
@@ -57,9 +58,9 @@ import { ConfirmationDialogService } from '../../core/services/confirmation-dial
                             <p class="text-[15px] font-bold text-on-surface truncate">{{ card.front }}</p>
                             <p class="text-[13px] text-on-surface-variant truncate mt-1">{{ card.back }}</p>
                             <div class="flex items-center gap-2 mt-2">
-                                @if (getCardStatus(card); as status) {
-                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-md" [ngClass]="status.classes">
-                                        {{ status.label }}
+                                @if (card.statusLabel) {
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-md" [ngClass]="card.statusClasses">
+                                        {{ card.statusLabel }}
                                     </span>
                                 }
                             </div>
@@ -94,7 +95,7 @@ export class DeckDetailsComponent implements OnInit {
   private confirmDialog = inject(ConfirmationDialogService);
 
   deck = signal<Deck | null>(null);
-  cards = signal<Flashcard[]>([]);
+  cards = signal<(Flashcard & { statusLabel?: string, statusClasses?: string })[]>([]);
   loading = signal<boolean>(true);
 
   async ngOnInit() {
@@ -111,7 +112,12 @@ export class DeckDetailsComponent implements OnInit {
       ]);
       
       this.deck.set(deckData);
-      this.cards.set(cardsData);
+      
+      const mappedCards = cardsData.map(c => {
+        const status = this.getCardStatus(c);
+        return { ...c, statusLabel: status?.label, statusClasses: status?.classes };
+      });
+      this.cards.set(mappedCards);
       
     } catch (error) {
       console.error('Error fetching deck details', error);

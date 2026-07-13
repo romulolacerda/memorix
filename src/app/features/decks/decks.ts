@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,6 +10,7 @@ import { Deck } from '../../core/models/models';
 @Component({
   selector: 'app-decks',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, CommonModule, MatIconModule, DeckCardComponent, EmptyStateComponent],
   template: `
     <div class="px-4 py-6">
