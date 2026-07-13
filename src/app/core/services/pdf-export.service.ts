@@ -2,28 +2,18 @@ import { Injectable } from '@angular/core';
 import { GoogleGenAI } from '@google/genai';
 import { jsPDF } from 'jspdf';
 import { Flashcard } from '../models/models';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class PdfExportService {
     
-    private getGeminiKey(): string | null {
-        let key = localStorage.getItem('gemini_api_key');
-        if (!key) {
-            key = prompt('Insira sua chave da API do Gemini (Google AI Studio) para gerar o PDF:');
-            if (key) {
-                localStorage.setItem('gemini_api_key', key);
-            }
-        }
-        return key;
-    }
-
     async generateAndShareStudyPdf(cards: Flashcard[]) {
         if (!cards || cards.length === 0) {
             alert('Nenhum cartão para exportar.');
             return;
         }
 
-        const apiKey = this.getGeminiKey();
+        const apiKey = environment.geminiKey;
         if (!apiKey) return;
 
         try {
