@@ -7,7 +7,7 @@ import { environment } from '../../../environments/environment';
 @Injectable({ providedIn: 'root' })
 export class PdfExportService {
     
-    async generateAndShareStudyPdf(cards: Flashcard[]) {
+    async generateAndShareStudyPdf(cards: Flashcard[], deckName?: string) {
         if (!cards || cards.length === 0) {
             alert('Nenhum cartão para exportar.');
             return;
@@ -52,7 +52,8 @@ ${JSON.stringify(cards.map(c => ({ front: c.front, back: c.back })))}
             let y = 20;
             
             doc.setFontSize(20);
-            doc.text('Sessão de Estudos - Memorix', 20, y);
+            const title = deckName ? `Sessão de Estudos - ${deckName}` : 'Sessão de Estudos - Memorix';
+            doc.text(title, 20, y);
             y += 15;
 
             for (const group of groupedData) {

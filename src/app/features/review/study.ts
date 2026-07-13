@@ -7,6 +7,7 @@ import { PrimaryButtonComponent } from '../../shared/ui/primary-button';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { ReviewActionsComponent } from '../../shared/ui/review-actions';
 import { FlashcardRepository } from '../../core/repositories/flashcard.repository';
+import { DeckRepository } from '../../core/repositories/deck.repository';
 import { Flashcard } from '../../core/models/models';
 import { SM2SchedulerService, ReviewGrade } from '../../core/services/sm2-scheduler.service';
 import { StudyLogRepository } from '../../core/repositories/study-log.repository';
@@ -137,6 +138,7 @@ type StudyState = 'front' | 'back' | 'finished' | 'empty';
 export class StudyComponent implements OnInit {
     private route = inject(ActivatedRoute);
     private flashcardRepo = inject(FlashcardRepository);
+    private deckRepo = inject(DeckRepository);
     private sm2 = inject(SM2SchedulerService);
     private studyLogRepo = inject(StudyLogRepository);
     private notification = inject(NotificationService);
@@ -145,6 +147,7 @@ export class StudyComponent implements OnInit {
     state = signal<StudyState>('front');
     loading = signal<boolean>(true);
     isGeneratingPdf = signal<boolean>(false);
+    deckName = signal<string>('');
     
     cards = signal<Flashcard[]>([]);
     currentIndex = signal<number>(0);
@@ -169,6 +172,10 @@ export class StudyComponent implements OnInit {
             if (deckId === 'daily') {
                 data = await this.flashcardRepo.getDueFlashcards();
             } else if (deckId) {
+                // Fetch deck info
+                const deck = await this.deckRepo.getDeckById(deckId);
+                if (deck) this.deckName.set(deck.name);
+
                 // To keep it simple, if entering a specific deck, we just study due cards of that deck.
                 // Or we can just fetch all due cards and filter. Let's fetch all cards of that deck for now (MVP).
                 const allDeckCards = await this.flashcardRepo.getFlashcardsByDeck(deckId);
@@ -225,7 +232,7 @@ export class StudyComponent implements OnInit {
     async sharePdf() {
         this.isGeneratingPdf.set(true);
         try {
-            await this.pdfExport.generateAndShareStudyPdf(this.cards());
+            await this.pdfExport.generateAndShareStudyPdf(this.cards(), this.deckName());
         } finally {
             this.isGeneratingPdf.set(false);
         }
